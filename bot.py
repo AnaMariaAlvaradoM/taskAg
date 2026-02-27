@@ -122,9 +122,21 @@ async def evening_reminder(app):
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
+async def post_init(app):
+    scheduler = AsyncIOScheduler(timezone=TZ)
+    scheduler.add_job(morning_summary, "cron", hour=8, minute=0, args=[app])
+    scheduler.add_job(evening_reminder, "cron", hour=21, minute=0, args=[app])
+    scheduler.start()
+    logger.info("Scheduler iniciado ✅")
+
 def main():
     init_db()
-    app = Application.builder().token(TOKEN).build()
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .post_init(post_init)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("add", add))
@@ -132,11 +144,6 @@ def main():
     app.add_handler(CommandHandler("all", all_tasks))
     app.add_handler(CommandHandler("done", done))
     app.add_handler(CommandHandler("progress", progress))
-
-    scheduler = AsyncIOScheduler(timezone=TZ)
-    scheduler.add_job(morning_summary, "cron", hour=8, minute=0, args=[app])
-    scheduler.add_job(evening_reminder, "cron", hour=21, minute=0, args=[app])
-    scheduler.start()
 
     logger.info("Bot iniciado ✅")
     app.run_polling()
